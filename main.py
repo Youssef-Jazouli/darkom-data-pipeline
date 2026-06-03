@@ -1,29 +1,24 @@
-import time
+import pandas as pd
 from modules.extraction import extract_to_staging
 from modules.transformation import transform_and_clean
-from modules.loading import init_schemas, load_to_warehouse, optimize_and_validate, cleanup_staging
+from modules.loading import load_to_warehouse, optimize_and_validate
 
-if __name__ == "__main__":
-    start_time = time.time()
+def main():
     print("🚀 DÉMARRAGE DU PIPELINE DARKOM...")
     
-    # 1. Initialisation des schémas
-    init_schemas()
+    # Étape 1 : Extraction des données brutes depuis le fichier CSV vers le Staging
+    raw_df = extract_to_staging()
     
-    # 2. Extraction
-    extract_to_staging()
-    
-    # 3. Transformation et Nettoyage
+    # Étape 2 : Nettoyage des données et création des nouvelles variables (Feature Engineering)
     cleaned_df = transform_and_clean()
     
-    # 4. Chargement dans le Data Warehouse
+    # Étape 3 : Chargement des données dans le Data Warehouse (Modèle en étoile)
     load_to_warehouse(cleaned_df)
     
-    # 5. Optimisation (Création des relations)
-    optimize_and_validate()  
+    # Étape 4 : Configuration des relations (Clés primaires et clés étrangères)
+    optimize_and_validate()
     
-    # 6. Libération de l'espace
-    cleanup_staging()
-    
-    end_time = time.time()
-    print(f"🎉 PIPELINE TERMINÉ AVEC SUCCÈS EN {round(end_time - start_time, 2)} SECONDES !")
+    print("✅ PIPELINE TERMINÉ AVEC SUCCÈS !")
+
+if __name__ == "__main__":
+    main()
