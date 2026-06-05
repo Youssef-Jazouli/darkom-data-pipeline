@@ -1,233 +1,282 @@
-# Darkom Data Pipeline 🏠📊
+# Darkom Data Pipeline
 
-A complete ETL (Extract, Transform, Load) data pipeline for Moroccan real estate announcements, designed to build a scalable data warehouse with Power BI integration.
+A robust and scalable data pipeline solution for ingesting, processing, and transforming raw data from multiple sources.
 
-## 📋 Project Overview
+## 📋 Table of Contents
 
-This project processes raw real estate listing data and transforms it into a structured data warehouse using a **Star Schema** model. The pipeline includes:
+- [Overview](#overview)
+- [Features](#features)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Prerequisites](#prerequisites)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
-- **Data Extraction**: Raw CSV data loaded into staging
-- **Data Transformation**: Cleaning, validation, and feature engineering
-- **Data Warehouse**: Star schema with dimensions and fact tables
-- **Business Intelligence**: Power BI dashboard integration
+## 🎯 Overview
 
-## 🏗️ Architecture
+Darkom Data Pipeline is a comprehensive data engineering solution designed to automate and streamline data workflows. It provides modular components for data extraction, transformation, and loading (ETL) operations with support for multiple data sources.
 
-### Database Schema Layers
+## ✨ Features
 
-```
-├── Staging Schema (staging)
-│   └── annonces_brutes - Raw data from CSV
-├── Clean Schema (clean)
-│   └── annonces_propres - Cleaned and processed data
-└── Data Warehouse Schema (bi_schema)
-    ├── dim_lieu (Location Dimension)
-    ├── dim_bien (Property Dimension)
-    ├── dim_temps (Time Dimension)
-    └── fact_annonces (Fact Table)
-```
-
-### Star Schema Design
-
-**Dimensions:**
-- **dim_lieu**: Location details (City, District)
-- **dim_bien**: Property characteristics (Type, Rooms, Bathrooms, Construction Year, etc.)
-- **dim_temps**: Time information (Publication Date, Year, Month, Quarter)
-
-**Fact Table:**
-- **fact_annonces**: Central facts with keys to dimensions and metrics (Price, Surface, Price/m², Category)
-
-## 🚀 Pipeline Stages
-
-### 1. **Extraction**
-- Reads raw CSV file using Pandas
-- Loads all data as text to preserve original state
-- Stores in `staging.annonces_brutes` table
-
-### 2. **Transformation & Cleaning**
-Performs comprehensive data quality operations:
-
-**Type Corrections:**
-- Converts price and surface to numeric
-- Standardizes dates and text fields
-- Handles missing values intelligently
-
-**Data Validation:**
-- Removes duplicates by announcement ID
-- Filters logical errors (price > 100, surface > 9 m²)
-- Cleans whitespace and standardizes text casing
-
-**Feature Engineering:**
-- `prix_m2`: Price per square meter
-- `age_bien`: Property age (2026 - construction year)
-- `categorie_prix`: Price categorization (Éco/Moyen/Haut/Luxe)
-- `categorie_surface`: Size categorization (Petit/Moyen/Grand)
-- Extracts temporal features (year, month, quarter of publication)
-
-Stores cleaned data in `clean.annonces_propres` table
-
-### 3. **Loading to Data Warehouse**
-Creates dimensions and fact tables:
-- Builds dimension tables with unique values
-- Assigns surrogate keys (lieu_id, bien_id)
-- Creates fact table with foreign key relationships
-
-### 4. **Optimization & Validation**
-- Adds primary keys to all tables
-- Creates foreign key constraints for referential integrity
-- Ensures data relationships for automatic Power BI linking
-
-### 5. **Cleanup**
-- Removes staging data to free space
-- Maintains clean production schema
-
-## 📊 Data Model
-
-| Field | Type | Description |
-|-------|------|-------------|
-| annonce_id | String | Unique announcement identifier |
-| prix | Numeric | Property price (MAD) |
-| surface | Numeric | Total surface area (m²) |
-| ville | String | City name |
-| quartier | String | District/Neighborhood |
-| type_bien | String | Property type (Apartment, Villa, etc.) |
-| transaction | String | Transaction type (Sale, Rent) |
-| nb_chambres | Integer | Number of bedrooms |
-| nb_salles_bain | Integer | Number of bathrooms |
-| etage | Integer | Floor number |
-| annee_construction | Integer | Construction year |
-| date_publication | Date | Announcement publication date |
-| prix_m2 | Numeric | Price per square meter |
-| age_bien | Integer | Property age in years |
-| categorie_prix | String | Price tier (Éco/Moyen/Haut/Luxe) |
-| categorie_surface | String | Size tier (Petit/Moyen/Grand) |
-
-## 🔧 Installation & Setup
-
-### Prerequisites
-- Python 3.8+
-- PostgreSQL database
-- pandas, sqlalchemy, psycopg2-binary
-
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Configure Database Connection
-Edit `config.py` with your PostgreSQL credentials:
-```python
-DB_USER = "your_username"
-DB_PASS = "your_password"
-DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_NAME = "Darkom-Data-Pipeline"
-```
-
-### 3. Prepare Data
-Place your CSV file at: `data/raw/darkom-annonces.csv`
-
-Expected columns:
-- annonce_id, prix, surface, ville, quartier, type_bien, transaction, nb_chambres, nb_salles_bain, etage, annee_construction, date_publication
-
-### 4. Run Pipeline
-```bash
-python main.py
-```
-
-Expected output:
-```
-🚀 DÉMARRAGE DU PIPELINE DARKOM...
-⏳ Étape 1: Extraction des données vers le Staging...
-🧹 Étape 2: Nettoyage et Feature Engineering...
-🏗️ Étape 3: Chargement dans le Data Warehouse...
-🔑 Étape 4: Application des clés primaires et étrangères...
-🎉 PIPELINE TERMINÉ AVEC SUCCÈS EN X.XX SECONDES !
-```
+- **Modular Architecture**: Extensible modules for different data processing tasks
+- **Configuration Management**: Environment-based configuration system
+- **Data Ingestion**: Support for multiple data sources
+- **Data Transformation**: Built-in transformation and validation utilities
+- **Error Handling**: Robust error handling and logging mechanisms
+- **Scalability**: Designed to handle large volumes of data efficiently
+- **Python-based**: Leverage the Python ecosystem with modern libraries
 
 ## 📁 Project Structure
 
 ```
 darkom-data-pipeline/
-├── main.py                          # Pipeline orchestration
-├── config.py                        # Database configuration
-├── requirements.txt                 # Python dependencies
-├── modules/
+├── modules/                    # Reusable pipeline modules
 │   ├── __init__.py
-│   ├── extraction.py               # Data extraction logic
-│   ├── transformation.py           # Data cleaning & feature engineering
-│   ├── loading.py                  # Data warehouse loading
-│   └── test.ipynb                  # Jupyter notebook for testing
+│   ├── extractors/            # Data extraction modules
+│   ├── transformers/          # Data transformation modules
+│   └── loaders/               # Data loading modules
 ├── data/
-│   └── raw/
-│       └── darkom-annonces.csv     # Source data
-├── dashboards/
-│   └── darkom.pbix                 # Power BI dashboard
-└── README.MD                        # Documentation
+│   └── raw/                   # Raw input data directory
+├── config.py                  # Configuration management
+├── main.py                    # Main pipeline orchestration
+├── requirements.txt           # Python dependencies
+├── .env                       # Environment variables (not committed)
+├── .gitignore                 # Git ignore rules
+└── README.md                  # Project documentation
 ```
 
-## 📈 Power BI Integration
+## 🚀 Getting Started
 
-The Star Schema is optimized for Power BI:
-- Direct table relationships via foreign keys
-- Automatic relationship detection
-- Ready for dimensional analysis
-- Supports slicing by location, property type, and time period
+### Prerequisites
 
-Use `dashboards/darkom.pbix` to visualize the data warehouse.
+- Python 3.8 or higher
+- pip package manager
+- Virtual environment tool (venv or conda)
 
-## 🔍 Key Features
+### Installation
 
-✅ **Robust Data Cleaning** - Handles missing values, duplicates, and outliers  
-✅ **Feature Engineering** - Creates meaningful derived features  
-✅ **Star Schema** - Optimized for OLAP analysis and BI tools  
-✅ **Data Validation** - Ensures referential integrity  
-✅ **Modular Design** - Separable extraction, transformation, and loading steps  
-✅ **Error Handling** - Coercive data type conversion with fallbacks  
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Youssef-Jazouli/darkom-data-pipeline.git
+   cd darkom-data-pipeline
+   ```
 
-## 📝 Code Comments
+2. **Create a virtual environment**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
 
-The code includes French comments explaining key concepts, ideal for presentation to stakeholders or instructors:
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-- "À dire au prof" sections highlight main ideas to communicate
-- Data flow is clearly documented
-- Business logic is explicit
+4. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-## 🚦 Error Handling
+## ⚙️ Configuration
 
-The pipeline uses pandas `.coerce` error handling:
-- **Invalid prices/surfaces** → NaN, filtered out
-- **Invalid dates** → Default to 2026-01-01
-- **Missing categorical data** → Default values (0 for numbers, "Inconnu" for text)
-- **Duplicates** → Removed based on announcement ID
+The pipeline uses environment variables and a configuration file for customization:
 
-## 💡 Future Enhancements
+### Environment Variables (.env)
 
-- [ ] Incremental loading (only new/updated records)
-- [ ] Data quality monitoring and logging
-- [ ] Automated scheduling (Airflow/Cron)
-- [ ] Real-time data pipeline for live announcements
-- [ ] Machine learning models for price prediction
-- [ ] API layer for data access
+Create a `.env` file in the project root with the following structure:
 
-## 📌 Notes
+```env
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=darkom_db
+DB_USER=your_user
+DB_PASSWORD=your_password
 
-- All prices are in Moroccan Dirhams (MAD)
-- Data is Moroccan real estate focused
-- Pipeline defaults to 2026 as current year for age calculations
-- Minimum viable property size: 9 m²
-- Minimum viable price: 100 MAD
+# API Configuration
+API_KEY=your_api_key
+API_BASE_URL=https://api.example.com
 
-## 📞 Support
+# Logging
+LOG_LEVEL=INFO
+LOG_FILE=pipeline.log
 
-For issues or questions about the pipeline, review:
-1. Database connection settings in `config.py`
-2. Input CSV format matches expected columns
-3. PostgreSQL database is running and accessible
-4. Required Python packages are installed
+# Other Configuration
+ENVIRONMENT=development
+```
+
+### Python Configuration (config.py)
+
+Modify `config.py` to set default configuration parameters:
+
+```python
+# Example configuration
+PIPELINE_CONFIG = {
+    'batch_size': 1000,
+    'timeout': 300,
+    'retry_attempts': 3,
+    'data_dir': './data/raw',
+    'output_dir': './data/processed'
+}
+```
+
+## 🔄 Usage
+
+### Running the Pipeline
+
+```bash
+python main.py
+```
+
+### Running Specific Modules
+
+```bash
+# Extract data
+python -m modules.extractors.your_extractor
+
+# Transform data
+python -m modules.transformers.your_transformer
+
+# Load data
+python -m modules.loaders.your_loader
+```
+
+### Using Jupyter Notebooks
+
+Explore data and develop components interactively:
+
+```bash
+jupyter notebook
+```
+
+## 👨‍💻 Development
+
+### Project Guidelines
+
+- **Code Style**: Follow PEP 8 conventions
+- **Documentation**: Include docstrings in all functions and classes
+- **Testing**: Write unit tests for new features
+- **Logging**: Use the logging module instead of print statements
+
+### Creating New Modules
+
+1. Create a new module file in the appropriate directory
+2. Implement the required interface
+3. Add configuration parameters to `config.py`
+4. Update `main.py` to include the new module if needed
+
+### Example Module Structure
+
+```python
+"""
+Module: custom_transformer
+Description: Custom data transformation logic
+"""
+
+from modules.base import BaseTransformer
+import logging
+
+logger = logging.getLogger(__name__)
+
+class CustomTransformer(BaseTransformer):
+    """Custom transformer implementation"""
+    
+    def __init__(self, config):
+        super().__init__(config)
+        self.config = config
+    
+    def transform(self, data):
+        """Transform input data"""
+        logger.info("Transforming data...")
+        # Implementation here
+        return transformed_data
+```
+
+## 📊 Data Workflow
+
+```
+Raw Data Sources
+       ↓
+   Extraction
+       ↓
+   Validation
+       ↓
+  Transformation
+       ↓
+   Aggregation
+       ↓
+  Data Storage/Output
+```
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Issue**: Module import errors
+```bash
+# Solution: Ensure PYTHONPATH includes project root
+export PYTHONPATH="${PYTHONPATH}:/path/to/darkom-data-pipeline"
+```
+
+**Issue**: Missing dependencies
+```bash
+# Solution: Reinstall requirements
+pip install --upgrade -r requirements.txt
+```
+
+**Issue**: Configuration not loading
+```bash
+# Solution: Verify .env file exists and is properly formatted
+cat .env
+```
+
+## 📝 Logging
+
+The pipeline includes comprehensive logging. Check `pipeline.log` for detailed execution information:
+
+```bash
+# View logs in real-time
+tail -f pipeline.log
+
+# Search for errors
+grep "ERROR" pipeline.log
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -am 'Add new feature'`)
+4. Push to the branch (`git push origin feature/your-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 👤 Author
+
+**Youssef Jazouli**
+- GitHub: [@Youssef-Jazouli](https://github.com/Youssef-Jazouli)
+
+## 📧 Support
+
+For support, please open an issue on the GitHub repository or contact the maintainer.
+
+## 🔗 Related Links
+
+- [Python Data Engineering](https://www.python.org/)
+- [ETL Best Practices](https://en.wikipedia.org/wiki/Extract,_transform,_load)
+- [Data Pipeline Patterns](https://martinfowler.com/bliki/DataPipeline.html)
 
 ---
 
-**Status**: ✅ Production Ready  
-**Last Updated**: 2026  
-**Language**: Python 3 + SQL
+**Last Updated**: June 2026  
+**Status**: Active Development

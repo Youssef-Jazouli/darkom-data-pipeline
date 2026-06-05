@@ -1,44 +1,84 @@
+import os
+import logging
 import pandas as pd
 import numpy as np
 from config import engine
 
+def extract_type_bien(title):
+    if not isinstance(title, str):
+        return None
+    title = title.lower()
+    if "appartement" in title: return "Appartement"
+    elif "villa" in title: return "Villa"
+    elif "bureau" in title: return "Bureau"
+    elif "terrain" in title: return "Terrain"
+    elif "duplex" in title: return "Duplex"
+    else: return None
+
+def fill_transaction(row):
+    if pd.notna(row["transaction"]) and str(row["transaction"]).strip() != "":
+        return row["transaction"]
+    if pd.notna(row["prix"]) and row["prix"] <= 30000:
+        return "Location"
+    else:
+        return "Vente"
+
 def transform_and_clean():
     print("🧹 Étape 2: Nettoyage et Feature Engineering...")
-    # Récupère les données brutes depuis la table de staging
-    df = pd.read_sql_table('annonces_brutes', engine, schema='staging')
-    
-    # 1. Conversion des prix et surfaces + nettoyage des valeurs aberrantes
-    df['prix'] = pd.to_numeric(df['prix'], errors='coerce')
-    df['surface'] = pd.to_numeric(df['surface'], errors='coerce')
-    df = df[(df['prix'] > 100) & (df['surface'] > 9)].drop_duplicates(subset=['annonce_id'])
-    
-    # 2. Nettoyage et propagation des dates (ffill/bfill)
-    df['date_publication'] = pd.to_datetime(df['date_publication'], errors='coerce')
-    df['date_publication'] = df['date_publication'].ffill().bfill()
-    
-    # 3. Nettoyage et propagation du texte (ffill/bfill)
-    for col in ['ville', 'quartier', 'type_bien', 'transaction']:
-        df[col] = df[col].str.strip().str.title()
-        df[col] = df[col].replace('', np.nan).ffill().bfill()
-    
-    # 4. Nettoyage et propagation des nombres entiers (ffill/bfill)
-    for col in ['nb_chambres', 'nb_salles_bain', 'etage', 'annee_construction']:
-        df[col] = pd.to_numeric(df[col], errors='coerce')
-        df[col] = df[col].ffill().bfill().astype(int)
-    
-    # 5. Feature Engineering (Calculs et nouvelles colonnes)
-    df['prix_m2'] = df['prix'] / df['surface']
-    df['age_bien'] = 2026 - df['annee_construction']
-    
-    # Découpage des prix et des surfaces en catégories
-    df['categorie_prix'] = pd.cut(df['prix'], bins=[-1, 500000, 1500000, 4000000, np.inf], labels=['Éco', 'Moyen', 'Haut', 'Luxe'])
-    df['categorie_surface'] = pd.cut(df['surface'], bins=[-1, 80, 150, np.inf], labels=['Petit', 'Moyen', 'Grand'])
-    
-    # Extraction des morceaux de la date pour l'analyse temporelle
-    df['annee_pub'] = df['date_publication'].dt.year
-    df['mois_pub'] = df['date_publication'].dt.month
-    df['trimestre_pub'] = df['date_publication'].dt.quarter
-    
-    # Sauvegarde les données propres dans la table finale du dossier 'clean'
-    df.to_sql('annonces_propres', engine, schema='clean', if_exists='replace', index=False)
+    logging.info("🧹 Étape 2: Démarrage du nettoyage et Feature Engineering...")
+
+    query = "SELECT * FROM staging.annonces_brutes"
+    df = pd.read_sql(query, engine)
+
+    # ÉTAPE 1 : Nettoyage textuel
+    df["ville"] = df["ville"].str.strip().str.title()
+    df["quartier"] = df["quartier"].str.strip().str.title()
+    df = df.dropna(subset=['ville', 'quartier'])
+
+    # ÉTAPE 2 : Correction des types (Ajout de surface ici)
+    df["date_publication"] = pd.to_datetime(df["date_publication"], errors="coerce")
+    numeric_columns = ["prix", "surface", "nb_chambres", "nb_salles_bain", "etage", "annee_construction"]
+    for col in numeric_columns:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # ÉTAPE 3 : Gestion des valeurs manquantes
+    df = df.sort_values("date_publication").reset_index(drop=True)
+    df["date_publication"] = df["date_publication"].ffill().bfill()
+
+    df["quartier"] = df.groupby("ville")["quartier"].transform(
+        lambda x: x.fillna(x.mode()[0] if not x.mode().empty else "Unknown")
+    )
+    df["type_bien"] = df["type_bien"].fillna(df["titre"].apply(extract_type_bien))
+    df["transaction"] = df.apply(fill_transaction, axis=1)
+
+    columns_to_fill = ["nb_chambres", "nb_salles_bain", "etage"]
+    for col in columns_to_fill:
+        df.loc[df["type_bien"] == "Terrain", col] = df.loc[df["type_bien"] == "Terrain", col].fillna(0)
+        median_val = df.groupby("type_bien")[col].transform("median")
+        df[col] = df[col].fillna(median_val)
+
+    constr_median = df.groupby(["ville", "type_bien"])["annee_construction"].transform("median")
+    df["annee_construction"] = df["annee_construction"].fillna(constr_median)
+
+    for col in numeric_columns:
+        df[col] = df[col].round().astype("Int64")
+
+    # ÉTAPE 4 : Traitement des Outliers
+    df = df[df["surface"] >= 30]
+    df = df[df["nb_chambres"] <= 10]
+    df = df[df["nb_salles_bain"] <= 6]
+    df = df[df["prix"] <= 20000000]
+
+    # ÉTAPE 5 : Feature Engineering
+    df['annee_pub'] = df['date_publication'].dt.year.astype("Int64")
+    df['mois_pub'] = df['date_publication'].dt.month.astype("Int64")
+    df['trimestre_pub'] = df['date_publication'].dt.quarter.astype("Int64")
+    df['prix_m2'] = (df['prix'] / df['surface']).round(2)
+    df['categorie_surface'] = pd.cut(df['surface'], bins=[0, 50, 100, 150, np.inf], labels=['Petite', 'Moyenne', 'Grande', 'Très Grande'])
+    df['categorie_prix'] = pd.cut(df['prix'], bins=[0, 500000, 1000000, 2000000, np.inf], labels=['Économique', 'Standard', 'Haut standing', 'Luxe'])
+
+    # ÉTAPE 6 : Déduplication préventive
+    df = df.drop_duplicates(subset=["annonce_id"], keep="first")
+
+    logging.info("✅ STEP 2 END - Nettoyage et Feature Engineering complétés.")
     return df
