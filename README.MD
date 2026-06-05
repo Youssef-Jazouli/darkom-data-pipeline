@@ -1,14 +1,12 @@
 # Darkom Data Pipeline
 
-A robust and scalable data pipeline solution for ingesting, processing, and transforming raw data from multiple sources.
+A robust Python-based data pipeline framework designed for efficient data processing, transformation, and analysis workflows.
 
 ## 📋 Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
 - [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
@@ -18,46 +16,42 @@ A robust and scalable data pipeline solution for ingesting, processing, and tran
 
 ## 🎯 Overview
 
-Darkom Data Pipeline is a comprehensive data engineering solution designed to automate and streamline data workflows. It provides modular components for data extraction, transformation, and loading (ETL) operations with support for multiple data sources.
+Darkom Data Pipeline is a flexible and modular data processing framework that enables users to build, orchestrate, and manage complex data workflows. The pipeline is designed with scalability and maintainability in mind, allowing for easy integration of custom processing modules and data sources.
 
 ## ✨ Features
 
-- **Modular Architecture**: Extensible modules for different data processing tasks
-- **Configuration Management**: Environment-based configuration system
-- **Data Ingestion**: Support for multiple data sources
-- **Data Transformation**: Built-in transformation and validation utilities
+- **Modular Architecture**: Easily extensible design with pluggable data processing modules
+- **Configuration Management**: Flexible configuration system via environment variables and config files
+- **Data Handling**: Support for multiple data formats and sources
+- **Jupyter Integration**: Included notebooks for exploratory analysis and pipeline testing
 - **Error Handling**: Robust error handling and logging mechanisms
-- **Scalability**: Designed to handle large volumes of data efficiently
-- **Python-based**: Leverage the Python ecosystem with modern libraries
+- **Python-Based**: Built entirely in Python for ease of development and deployment
 
 ## 📁 Project Structure
 
 ```
 darkom-data-pipeline/
-├── modules/                    # Reusable pipeline modules
-│   ├── __init__.py
-│   ├── extractors/            # Data extraction modules
-│   ├── transformers/          # Data transformation modules
-│   └── loaders/               # Data loading modules
+├── main.py              # Entry point for the pipeline execution
+├── config.py            # Configuration management and settings
+├── requirements.txt     # Python dependencies
+├── README.md            # This file
+├── .env                 # Environment variables (local config)
+├── .GITIGNORE          # Git ignore rules
 ├── data/
-│   └── raw/                   # Raw input data directory
-├── config.py                  # Configuration management
-├── main.py                    # Main pipeline orchestration
-├── requirements.txt           # Python dependencies
-├── .env                       # Environment variables (not committed)
-├── .gitignore                 # Git ignore rules
-└── README.md                  # Project documentation
+│   └── raw/            # Raw input data directory
+├── modules/            # Custom data processing modules
+├── __pycache__/        # Python cache (auto-generated)
+└── notebooks/          # Jupyter notebooks for analysis
 ```
 
-## 🚀 Getting Started
+## 🚀 Installation
 
 ### Prerequisites
 
 - Python 3.8 or higher
-- pip package manager
-- Virtual environment tool (venv or conda)
+- pip (Python package manager)
 
-### Installation
+### Setup
 
 1. **Clone the repository**
    ```bash
@@ -65,7 +59,7 @@ darkom-data-pipeline/
    cd darkom-data-pipeline
    ```
 
-2. **Create a virtual environment**
+2. **Create a virtual environment** (recommended)
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -76,7 +70,7 @@ darkom-data-pipeline/
    pip install -r requirements.txt
    ```
 
-4. **Set up environment variables**
+4. **Configure environment variables**
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
@@ -84,48 +78,36 @@ darkom-data-pipeline/
 
 ## ⚙️ Configuration
 
-The pipeline uses environment variables and a configuration file for customization:
+### Environment Variables
 
-### Environment Variables (.env)
-
-Create a `.env` file in the project root with the following structure:
+Create a `.env` file in the project root with the following variables:
 
 ```env
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=darkom_db
-DB_USER=your_user
-DB_PASSWORD=your_password
-
-# API Configuration
-API_KEY=your_api_key
-API_BASE_URL=https://api.example.com
+# Data paths
+DATA_RAW_PATH=./data/raw
+DATA_PROCESSED_PATH=./data/processed
 
 # Logging
 LOG_LEVEL=INFO
-LOG_FILE=pipeline.log
 
-# Other Configuration
-ENVIRONMENT=development
+# Pipeline settings
+PIPELINE_NAME=darkom-pipeline
+ENABLE_NOTIFICATIONS=false
 ```
 
-### Python Configuration (config.py)
+### Config File
 
-Modify `config.py` to set default configuration parameters:
+Modify `config.py` to customize pipeline behavior:
 
 ```python
-# Example configuration
-PIPELINE_CONFIG = {
-    'batch_size': 1000,
-    'timeout': 300,
-    'retry_attempts': 3,
-    'data_dir': './data/raw',
-    'output_dir': './data/processed'
-}
+from config import Config
+
+config = Config()
+config.set_data_path('./data/raw')
+config.set_log_level('INFO')
 ```
 
-## 🔄 Usage
+## 💻 Usage
 
 ### Running the Pipeline
 
@@ -133,129 +115,129 @@ PIPELINE_CONFIG = {
 python main.py
 ```
 
-### Running Specific Modules
+### Command Line Arguments
 
 ```bash
-# Extract data
-python -m modules.extractors.your_extractor
-
-# Transform data
-python -m modules.transformers.your_transformer
-
-# Load data
-python -m modules.loaders.your_loader
+python main.py --config path/to/config.yml --mode production
 ```
 
-### Using Jupyter Notebooks
+### Using Modules
 
-Explore data and develop components interactively:
+The pipeline provides modular components for data processing:
+
+```python
+from modules import DataLoader, Transformer, Exporter
+
+# Load data
+loader = DataLoader(source='data/raw')
+data = loader.load()
+
+# Transform data
+transformer = Transformer(config=config)
+processed_data = transformer.transform(data)
+
+# Export results
+exporter = Exporter(destination='data/processed')
+exporter.export(processed_data)
+```
+
+### Jupyter Notebooks
+
+Explore the pipeline with interactive notebooks:
 
 ```bash
 jupyter notebook
+# Open notebooks/ directory and select a notebook to run
 ```
 
-## 👨‍💻 Development
+## 🔧 Development
 
-### Project Guidelines
+### Adding a New Module
 
-- **Code Style**: Follow PEP 8 conventions
-- **Documentation**: Include docstrings in all functions and classes
-- **Testing**: Write unit tests for new features
-- **Logging**: Use the logging module instead of print statements
+1. Create a new Python file in the `modules/` directory
+2. Implement your data processing logic
+3. Add appropriate error handling and logging
+4. Document your module with docstrings
 
-### Creating New Modules
-
-1. Create a new module file in the appropriate directory
-2. Implement the required interface
-3. Add configuration parameters to `config.py`
-4. Update `main.py` to include the new module if needed
-
-### Example Module Structure
+Example module:
 
 ```python
-"""
-Module: custom_transformer
-Description: Custom data transformation logic
-"""
-
-from modules.base import BaseTransformer
+# modules/my_processor.py
 import logging
 
 logger = logging.getLogger(__name__)
 
-class CustomTransformer(BaseTransformer):
-    """Custom transformer implementation"""
-    
+class MyProcessor:
     def __init__(self, config):
-        super().__init__(config)
         self.config = config
+        logger.info("MyProcessor initialized")
     
-    def transform(self, data):
-        """Transform input data"""
-        logger.info("Transforming data...")
-        # Implementation here
-        return transformed_data
+    def process(self, data):
+        """Process input data and return results."""
+        try:
+            # Your processing logic here
+            return processed_data
+        except Exception as e:
+            logger.error(f"Processing failed: {e}")
+            raise
 ```
 
-## 📊 Data Workflow
+### Running Tests
 
-```
-Raw Data Sources
-       ↓
-   Extraction
-       ↓
-   Validation
-       ↓
-  Transformation
-       ↓
-   Aggregation
-       ↓
-  Data Storage/Output
-```
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-**Issue**: Module import errors
 ```bash
-# Solution: Ensure PYTHONPATH includes project root
-export PYTHONPATH="${PYTHONPATH}:/path/to/darkom-data-pipeline"
+# Run unit tests (if implemented)
+pytest tests/
+
+# Run with coverage
+pytest --cov=modules tests/
 ```
 
-**Issue**: Missing dependencies
-```bash
-# Solution: Reinstall requirements
-pip install --upgrade -r requirements.txt
-```
+## 📦 Dependencies
 
-**Issue**: Configuration not loading
+Key dependencies are listed in `requirements.txt`:
+
+- **pandas**: Data manipulation and analysis
+- **numpy**: Numerical computing
+- **jupyter**: Interactive notebooks
+- **python-dotenv**: Environment variable management
+- And others as specified in requirements.txt
+
+Install or update dependencies:
+
 ```bash
-# Solution: Verify .env file exists and is properly formatted
-cat .env
+pip install -r requirements.txt
 ```
 
 ## 📝 Logging
 
-The pipeline includes comprehensive logging. Check `pipeline.log` for detailed execution information:
+The pipeline includes comprehensive logging:
 
-```bash
-# View logs in real-time
-tail -f pipeline.log
+```python
+import logging
 
-# Search for errors
-grep "ERROR" pipeline.log
+logger = logging.getLogger(__name__)
+logger.info("Processing started")
+logger.warning("Potential issue detected")
+logger.error("Critical error occurred")
 ```
+
+Configure logging levels in `.env` or `config.py`.
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please follow these steps:
+Contributions are welcome! To contribute:
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -am 'Add new feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
+
+Please ensure your code:
+- Follows PEP 8 style guidelines
+- Includes docstrings for functions and classes
+- Has appropriate error handling
+- Is tested before submission
 
 ## 📄 License
 
@@ -264,19 +246,18 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 👤 Author
 
 **Youssef Jazouli**
+
 - GitHub: [@Youssef-Jazouli](https://github.com/Youssef-Jazouli)
 
-## 📧 Support
+## 🐛 Support
 
-For support, please open an issue on the GitHub repository or contact the maintainer.
+Found a bug? Have a question? Open an [issue](https://github.com/Youssef-Jazouli/darkom-data-pipeline/issues) on GitHub.
 
-## 🔗 Related Links
+## 🙏 Acknowledgments
 
-- [Python Data Engineering](https://www.python.org/)
-- [ETL Best Practices](https://en.wikipedia.org/wiki/Extract,_transform,_load)
-- [Data Pipeline Patterns](https://martinfowler.com/bliki/DataPipeline.html)
+- Thanks to all contributors and users of this project
+- Built with ❤️ using Python and open-source tools
 
 ---
 
-**Last Updated**: June 2026  
-**Status**: Active Development
+**Last Updated**: June 2026
